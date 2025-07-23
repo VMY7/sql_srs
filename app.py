@@ -1,27 +1,62 @@
 import streamlit as st
 import pandas as pd
 import duckdb
+import io
+
+csv = '''
+beverage,price
+Orange juice,2.5
+Expresso,2
+Tea,3
+'''
+beverages = pd.read_csv(io.StringIO(csv))
+
+csv2 = '''
+food_item,food_price
+cookie juice,2.5
+chocolatine,2
+muffin,3
+'''
+food_items = pd.read_csv(io.StringIO(csv2))
+
+answer = """
+SELECT * FROM beverages
+CROSS JOIN food_items
+"""
+solution = duckdb.sql(answer).df()
+
 
 st.write("""
 # SQl SRS
 Spaced Repetition System SQL practice
 """)
 
-option = st.selectbox(
-    "What would you like to review ?",
-    ["Joins", "Group By", "Windows Functions"],
-    index=None,
-    placeholder="Select a theme...",
-)
+with st.sidebar:
+    option = st.selectbox(
+        "What would you like to review ?",
+        ["Joins", "Group By", "Windows Functions"],
+        index=None,
+        placeholder="Select a theme...",
+    )
 
-st.write("You selected:", option)
+    st.write("You selected:", option)
 
-data = {"a": [1, 2, 3], "b": [4, 5, 6]}
-df = pd.DataFrame(data)
+st.header("Enter your code:")
+query = st.text_area(label="Votre code SQL ici", key="user_input")
 
-tab1, tab2, tab3 = st.tabs(["Cats", "Dogs", "Owls"])
+if query:
+    result = duckdb.sql(query).df()
+    st.dataframe(result)
 
-with tab1:
-    st.dataframe(df)
-    input_text = st.text_input(label="Enter a text")
-    st.write(duckdb.sql(input_text))
+tab2, tab3 = st.tabs(["Tables", "Solutions"])
+
+with tab2:
+    st.write("table: beverages")
+    st.dataframe(beverages)
+    st.write("table: food_items")
+    st.dataframe(food_items)
+    st.write("expected:")
+    st.dataframe(solution)
+
+with tab3:
+    st.write(answer)

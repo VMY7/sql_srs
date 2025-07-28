@@ -1,3 +1,4 @@
+# pylint: disable=missing-module-docstring
 import io
 import pandas as pd
 import duckdb

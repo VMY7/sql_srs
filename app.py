@@ -1,6 +1,7 @@
 # pylint: disable=missing-module-docstring
 import os
 import logging
+from datetime import date, timedelta
 import duckdb
 import streamlit as st
 
@@ -77,21 +78,20 @@ st.header("Enter your code:")
 query = st.text_area(label="Votre code SQL ici", key="user_input")
 
 if query:
-    result = con.execute(query).df()
-    st.dataframe(result)
+    check_users_solution(query)
 
-    try:
-        result = result[solution_df.columns]
-        st.dataframe(result.compare(solution_df))
-    except KeyError as e:
-        st.write(f"KeyError: {e}")
-
-    n_lines_difference = result.shape[0] - solution_df.shape[0]
-
-    if n_lines_difference != 0:
-        st.write(
-            f"result has {n_lines_difference} lines difference with the solution_df"
+for n_days in [2, 7, 21]:
+    if st.button(f"Revoir dans {n_days} jours"):
+        next_review = date.today() + timedelta(days=n_days)
+        con.execute(
+            f"UPDATE memory_state SET last_reviewed = '{next_review}'"
+            f"WHERE exercise_name = '{exercise_name}'"
         )
+        st.rerun()
+
+if st.button("Reset"):
+    con.execute("UPDATE memory_state SET last_reviewed = '1970-01-01'")
+    st.rerun()
 
 tab2, tab3 = st.tabs(["Tables", "Solutions"])
 

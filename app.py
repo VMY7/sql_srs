@@ -1,6 +1,7 @@
 # pylint: disable=missing-module-docstring
 import os
 import logging
+from datetime import date, timedelta
 import duckdb
 import streamlit as st
 
@@ -14,6 +15,34 @@ if "exercises_sql_tables.duckdb" not in os.listdir("data"):
         exec(f.read())  # pylint: disable=exec-used
 
 con = duckdb.connect(database="data/exercises_sql_tables.duckdb", read_only=False)
+
+
+def check_users_solution(user_query: str) -> None:
+    """
+     Checks that user SQL query is correct by:
+     1 : checking the columns
+     2 : checking the values
+    :param user_query: a string containing the query inserted by the user
+    """
+    result = con.execute(user_query).df()
+    st.dataframe(result)
+
+    try:
+        result = result[solution_df.columns]
+        st.dataframe(result.compare(solution_df))
+        if result.compare(solution_df).shape == (0, 0):
+            st.write("Correct !")
+            st.balloons()
+    except KeyError as e:
+        st.write(f"KeyError: {e}")
+
+    n_lines_difference = result.shape[0] - solution_df.shape[0]
+
+    if n_lines_difference != 0:
+        st.write(
+            f"result has {n_lines_difference} lines difference with the solution_df"
+        )
+
 
 with st.sidebar:
     available_themes_df = con.execute("SELECT DISTINCT theme FROM memory_state").df()
@@ -49,21 +78,20 @@ st.header("Enter your code:")
 query = st.text_area(label="Votre code SQL ici", key="user_input")
 
 if query:
-    result = con.execute(query).df()
-    st.dataframe(result)
+    check_users_solution(query)
 
-    try:
-        result = result[solution_df.columns]
-        st.dataframe(result.compare(solution_df))
-    except KeyError as e:
-        st.write(f"KeyError: {e}")
-
-    n_lines_difference = result.shape[0] - solution_df.shape[0]
-
-    if n_lines_difference != 0:
-        st.write(
-            f"result has {n_lines_difference} lines difference with the solution_df"
+for n_days in [2, 7, 21]:
+    if st.button(f"Revoir dans {n_days} jours"):
+        next_review = date.today() + timedelta(days=n_days)
+        con.execute(
+            f"UPDATE memory_state SET last_reviewed = '{next_review}'"
+            f"WHERE exercise_name = '{exercise_name}'"
         )
+        st.rerun()
+
+if st.button("Reset"):
+    con.execute("UPDATE memory_state SET last_reviewed = '1970-01-01'")
+    st.rerun()
 
 tab2, tab3 = st.tabs(["Tables", "Solutions"])
 
